@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Storm Henk Flood Swipe Comparison</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+
+  <!-- Mapbox GL JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.js"></script>
+
+  <!-- Compare plugin -->
+  <link
+    rel="stylesheet"
+    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.css"
+    type="text/css"
+  />
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #comparison-container {
+      position: absolute;
+      inset: 0;
+    }
+
+    #before,
+    #after {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-label {
+      position: absolute;
+      top: 16px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.2;
+      pointer-events: none;
+    }
+
+    .label-left {
+      left: 16px;
+    }
+
+    .label-right {
+      right: 16px;
+    }
+
+    .note {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      z-index: 10;
+      max-width: 360px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #111;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.45;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .mode-switch {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 6px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .mode-btn {
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #222;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .mode-btn.active {
+      background: #1f6feb;
+      color: #fff;
+      border-color: #1f6feb;
+    }
+  </style>
+</head>
+<body>
+  <div id="comparison-container">
+    <div id="before"></div>
+    <div id="after"></div>
+
+    <div class="mode-switch" aria-label="影像类型切换">
+      <button id="btn-true" class="mode-btn active" type="button">真彩色</button>
+      <button id="btn-false" class="mode-btn" type="button">假彩色</button>
+    </div>
+
+    <div class="map-label label-left">Before flood<br>Nov–Dec 2023</div>
+    <div class="map-label label-right">After flood<br>Jan 2024</div>
+
+    <div class="note">
+      Gloucester / River Severn floodplain<br>
+      Storm Henk comparison
+    </div>
+  </div>
+
+  <script>
+    //Mapbox access token
+    mapboxgl.accessToken = 'pk.eyJ1IjoibGV2aW5lbGl1IiwiYSI6ImNta21vc3doOTBleGYza3IycDNsOXRidXQifQ.SdtOnvfZEml6QGLmnnduDQ';
+
+    // Mapbox Studio tileset ID
+    // mapbox://username.tilesetid
+    const TILESETS = {
+      trueColor: {
+        before: 'mapbox://levineliu.19lrd4d8',
+        after: 'mapbox://levineliu.dasleil1'
+      },
+      falseColor: {
+        before: 'mapbox://levineliu.4eqesq76',
+        after: 'mapbox://levineliu.4ma7g0c0'
+      }
+    };
+
+    let currentMode = 'trueColor';
+
+    // 3. Gloucester 大致中心
+    const center = [-2.244, 51.864];
+    const zoom = 12;
+
+    // 4. 一个极简空白 style，只放你的 raster，不叠加其他底图
+    const blankStyle = {
+      version: 8,
+      sources: {},
+      layers: [
+        {
+          id: 'background',
+          type: 'background',
+          paint: {
+            'background-color': '#f5f5f5'
+          }
+        }
+      ]
+    };
+
+    // 5. 创建 before map
+    const beforeMap = new mapboxgl.Map({
+      container: 'before',
+      style: blankStyle,
+      center: center,
+      zoom: zoom,
+      bearing: 0,
+      pitch: 0,
+      hash: false
+    });
+
+    // 6. 创建 after map
+    const afterMap = new mapboxgl.Map({
+      container: 'after',
+      style: blankStyle,
+      center: center,
+      zoom: zoom,
+      bearing: 0,
+      pitch: 0,
+      hash: false
+    });
+
+    // 可选：加缩放控件
+    beforeMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    afterMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    function upsertRaster(map, sourceId, layerId, tilesetUrl) {
+      if (map.getLayer(layerId)) {
+        map.removeLayer(layerId);
+      }
+      if (map.getSource(sourceId)) {
+        map.removeSource(sourceId);
+      }
+
+      map.addSource(sourceId, {
+        type: 'raster',
+        url: tilesetUrl,
+        tileSize: 256
+      });
+
+      map.addLayer({
+        id: layerId,
+        type: 'raster',
+        source: sourceId,
+        paint: {
+          'raster-resampling': 'nearest',
+          'raster-fade-duration': 0
+        }
+      });
+    }
+
+    function applyMode(mode) {
+      currentMode = mode;
+      const ids = TILESETS[mode];
+
+      if (beforeMap.isStyleLoaded()) {
+        upsertRaster(beforeMap, 'before-raster', 'before-raster-layer', ids.before);
+      }
+      if (afterMap.isStyleLoaded()) {
+        upsertRaster(afterMap, 'after-raster', 'after-raster-layer', ids.after);
+      }
+
+      document.getElementById('btn-true').classList.toggle('active', mode === 'trueColor');
+      document.getElementById('btn-false').classList.toggle('active', mode === 'falseColor');
+    }
+
+    // 7. before raster
+    beforeMap.on('load', () => {
+      applyMode(currentMode);
+    });
+
+    // 8. after raster
+    afterMap.on('load', () => {
+      applyMode(currentMode);
+    });
+
+    // 9. Compare slider
+    const compare = new mapboxgl.Compare(
+      beforeMap,
+      afterMap,
+      '#comparison-container',
+      {
+        // 可选：初始滑块位置，0~1
+        mousemove: false,
+        orientation: 'vertical'
+      }
+    );
+
+    document.getElementById('btn-true').addEventListener('click', () => {
+      applyMode('trueColor');
+    });
+
+    document.getElementById('btn-false').addEventListener('click', () => {
+      applyMode('falseColor');
+    });
+  </script>
+</body>
+</html>
