@@ -74,21 +74,13 @@
   <script>
     mapboxgl.accessToken='pk.eyJ1IjoibGV2aW5lbGl1IiwiYSI6ImNta21vc3doOTBleGYza3IycDNsOXRidXQifQ.SdtOnvfZEml6QGLmnnduDQ';
     const TILESETS={trueColor:{before:'mapbox://levineliu.19lrd4d8',after:'mapbox://levineliu.dasleil1'},falseColor:{before:'mapbox://levineliu.4eqesq76',after:'mapbox://levineliu.4ma7g0c0'}};
-    const DATA_SOURCE={useGithub:true,githubBase:'https://raw.githubusercontent.com/Levine-l/CASA0029/main'};
-    function withBase(path){if(DATA_SOURCE.useGithub){return `${DATA_SOURCE.githubBase}/${path}`;}return path;}
-    const FILES={
-      flood:[withBase('flood_lsoa_storm_henk_2024.csv'),withBase('data/flood_lsoa_storm_henk_2024.csv'),'data/flood_lsoa_storm_henk_2024.csv'],
-      housing:[withBase('census2021-ts044-lsoa.csv'),withBase('data/census2021-ts044-lsoa.csv'),'data/census2021-ts044-lsoa.csv'],
-      shp:[
-        withBase('data/lsoa/LSOA_2021_EW_BSC_V4.zip'),
-        withBase('LSOA_2021_EW_BSC_V4.zip'),
-        withBase('data/lsoa/LSOA_2021_EW_BSC_V4.shp'),
-        withBase('LSOA_2021_EW_BSC_V4.shp'),
-        'data/lsoa/LSOA_2021_EW_BSC_V4.zip',
-        'LSOA_2021_EW_BSC_V4.zip',
-        'data/lsoa/LSOA_2021_EW_BSC_V4.shp'
-      ]
-    };
+    const DATA_SOURCE = { useGithub: false };
+
+const FILES = {
+  flood: ['flood_lsoa_storm_henk_2024.csv'],
+  housing: ['census2021-ts044-lsoa.csv'],
+  shp: ['lsoa.zip']
+};
     const TOTAL='Accommodation type: Total: All households';
     const FIELDS={detached:'Accommodation type: Detached',semi:'Accommodation type: Semi-detached',terraced:'Accommodation type: Terraced',flats:'Accommodation type: In a purpose-built block of flats or tenement'};
     const METRICS={
