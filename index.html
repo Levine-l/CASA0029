@@ -49,21 +49,21 @@
     <aside id="panel">
       <p class="eyebrow">Storm Henk</p>
       <h1>Flood + Housing Explorer</h1>
-      <p class="intro">Keep the imagery swipe, then read the same event as LSOA flood exposure linked to Census 2021 accommodation type.</p>
+      <p class="intro"></p>
       <div class="block">
         <label for="metric">Overlay metric</label>
         <select id="metric">
-          <option value="flooded_share">Flooded share of LSOA</option>
+          <option value="flooded_ratio">Flooded ratio of LSOA</option>
           <option value="flooded_area">Flooded area (m2)</option>
           <option value="total_households">Total households</option>
-          <option value="detached_share">Detached share</option>
-          <option value="semi_share">Semi-detached share</option>
-          <option value="terraced_share">Terraced share</option>
-          <option value="flats_share">Flats share</option>
+          <option value="detached_ratio">Detached ratio</option>
+          <option value="semi_ratio">Semi-detached ratio</option>
+          <option value="terraced_ratio">Terraced ratio</option>
+          <option value="flats_ratio">Flats ratio</option>
         </select>
         <div id="status">Loading flood exposure, housing attributes, and LSOA boundaries...</div>
       </div>
-      <section class="block"><h2 class="title">Study Area Snapshot</h2><div id="summary" class="cards"></div></section>
+      <section class="block"><h2 class="title">Summary</h2><div id="summary" class="cards"></div></section>
       <section class="block"><h2 class="title">Legend</h2><div id="legend"></div></section>
       <section class="block"><h2 class="title">Selected LSOA</h2><div id="details"></div></section>
       <section class="block"><h2 class="title">Most Exposed LSOAs</h2><div id="topList"></div></section>
@@ -84,26 +84,26 @@ const FILES = {
     const TOTAL='Accommodation type: Total: All households';
     const FIELDS={detached:'Accommodation type: Detached',semi:'Accommodation type: Semi-detached',terraced:'Accommodation type: Terraced',flats:'Accommodation type: In a purpose-built block of flats or tenement'};
     const METRICS={
-      flooded_share:{label:'Flooded share of LSOA',prop:'floodedShare',format:'percent',palette:['#9fd7ff','#73c2ff','#46a8ff','#1c87f2','#0d61bd'],zero:true,zeroLabel:'No detected new water'},
+      flooded_ratio:{label:'Flooded ratio of LSOA',prop:'floodedRatio',format:'percent',palette:['#9fd7ff','#73c2ff','#46a8ff','#1c87f2','#0d61bd'],zero:true,zeroLabel:'No detected new water'},
       flooded_area:{label:'Flooded area',prop:'floodedArea',format:'int',suffix:' m2',palette:['#b5e5ff','#8ad5ff','#5fc1ff','#289ce6','#0f6db9'],zero:true,zeroLabel:'0 m2'},
       total_households:{label:'Total households',prop:'totalHouseholds',format:'int',palette:['#f7d489','#efb86f','#df9451','#c96a35','#9d431e']},
-      detached_share:{label:'Detached share',prop:'detachedShare',format:'percent',palette:['#ffe7a6','#ffc975','#ffab4d','#ee7f31','#c65318']},
-      semi_share:{label:'Semi-detached share',prop:'semiShare',format:'percent',palette:['#d3f1bc','#abd98f','#82c362','#4ea33a','#2f7a20']},
-      terraced_share:{label:'Terraced share',prop:'terracedShare',format:'percent',palette:['#ffd7cc','#ffb8a4','#f68b74','#e15e47','#af3425']},
-      flats_share:{label:'Flats share',prop:'flatsShare',format:'percent',palette:['#d9dbff','#b4b6ff','#8f92ff','#676bfb','#4347cf']}
+      detached_ratio:{label:'Detached ratio',prop:'detachedRatio',format:'percent',palette:['#ffe7a6','#ffc975','#ffab4d','#ee7f31','#c65318']},
+      semi_ratio:{label:'Semi-detached ratio',prop:'semiRatio',format:'percent',palette:['#d3f1bc','#abd98f','#82c362','#4ea33a','#2f7a20']},
+      terraced_ratio:{label:'Terraced ratio',prop:'terracedRatio',format:'percent',palette:['#ffd7cc','#ffb8a4','#f68b74','#e15e47','#af3425']},
+      flats_ratio:{label:'Flats ratio',prop:'flatsRatio',format:'percent',palette:['#d9dbff','#b4b6ff','#8f92ff','#676bfb','#4347cf']}
     };
     const STYLE={version:8,sources:{},layers:[{id:'bg',type:'background',paint:{'background-color':'#07111c'}}]};
-    const state={mode:'trueColor',metric:'flooded_share',overlayVisible:true,geojson:null,idByCode:new Map(),selected:null,hover:null,maps:[]};
+    const state={mode:'trueColor',metric:'flooded_ratio',overlayVisible:true,geojson:null,idByCode:new Map(),selected:null,hover:null,maps:[],compare:null};
     const codes=['LSOA21CD','lsoa21cd','LSOA11CD','lsoa11cd','LSOA_CODE','lsoa_code'];
     const names=['LSOA21NM','lsoa21nm','LSOA11NM','lsoa11nm','LSOA_NAME','lsoa_name'];
     const colors={detached:'#f6ad55',semi:'#68d391',terraced:'#fc8181',flats:'#818cf8',other:'#94a3b8'};
     const metricEl=document.getElementById('metric'),statusEl=document.getElementById('status'),summaryEl=document.getElementById('summary'),legendEl=document.getElementById('legend'),detailsEl=document.getElementById('details'),topListEl=document.getElementById('topList');
-    const beforeMap=makeMap('before'),afterMap=makeMap('after');state.maps=[beforeMap,afterMap];new mapboxgl.Compare(beforeMap,afterMap,'#comparison-container',{mousemove:false,orientation:'vertical'});
+    const beforeMap=makeMap('before'),afterMap=makeMap('after');state.maps=[beforeMap,afterMap];
     metricEl.addEventListener('change',()=>{state.metric=metricEl.value;paintMetric()});
     document.getElementById('btn-true').addEventListener('click',()=>applyMode('trueColor'));
     document.getElementById('btn-false').addEventListener('click',()=>applyMode('falseColor'));
     document.getElementById('btn-overlay').addEventListener('click',()=>toggleOverlayVisibility());
-    Promise.all([ready(beforeMap),ready(afterMap),loadAll()]).then(([, , result])=>{state.geojson=result.geojson;state.idByCode=result.idByCode;applyMode(state.mode);state.maps.forEach(ensureLayers);const top=topExposed(1);state.selected=top.length?top[0].properties.code:null;paintMetric();renderSummary();renderTop();refreshSelection();setStatus(`${state.geojson.features.length.toLocaleString('en-GB')} LSOAs loaded\n${exposedCount()} LSOAs with detected new water`) }).catch((e)=>{console.error(e);setStatus(`Failed to load analysis layers.\n${e.message}`)});
+    //Promise.all([ready(beforeMap),ready(afterMap),loadAll()]).then(([, , result])=>{state.geojson=result.geojson;state.idByCode=result.idByCode;applyMode(state.mode);state.maps.forEach(ensureLayers);const top=topExposed(1);state.selected=top.length?top[0].properties.code:null;paintMetric();renderSummary();renderTop();refreshSelection();setStatus(`${state.geojson.features.length.toLocaleString('en-GB')} LSOAs loaded\n${exposedCount()} LSOAs with detected new water`) }).catch((e)=>{console.error(e);setStatus(`Failed to load analysis layers.\n${e.message}`)});
     function makeMap(container){const map=new mapboxgl.Map({container,style:STYLE,center:[-2.244,51.864],zoom:12,bearing:0,pitch:0,hash:false});map.addControl(new mapboxgl.NavigationControl(),'top-right');return map}
     function ready(map){return new Promise((resolve)=>{if(map.isStyleLoaded())resolve();else map.on('load',resolve)})}
     function setStatus(v){statusEl.textContent=v}
@@ -121,16 +121,17 @@ const FILES = {
     async function loadAll(){
       const [floodRows,housingRows,geojson]=await Promise.all([loadCsvCandidates(FILES.flood,'flood CSV'),loadCsvCandidates(FILES.housing,'housing CSV'),loadShpCandidates(FILES.shp)]);
       const floodByCode=new Map(),housingByCode=new Map();
-      floodRows.forEach((r)=>{const code=norm(r.lsoa21cd);if(code)floodByCode.set(code,{floodedShare:num(r.flooded_share),floodedArea:num(r.flooded_area_m2),lsoaArea:num(r.lsoa_area_m2),floodClass:String(r.flood_class||'0'),after:r.after_period||'',event:r.event_name||'Storm Henk'})});
-      housingRows.forEach((r)=>{const code=norm(r['geography code']);if(!code)return;const total=num(r[TOTAL]),det=num(r[FIELDS.detached]),semi=num(r[FIELDS.semi]),terr=num(r[FIELDS.terraced]),flats=num(r[FIELDS.flats]);housingByCode.set(code,{name:r.geography||code,totalHouseholds:total,detachedShare:total?det/total:0,semiShare:total?semi/total:0,terracedShare:total?terr/total:0,flatsShare:total?flats/total:0})});
+      floodRows.forEach((r)=>{const code=norm(r.lsoa21cd);if(code)floodByCode.set(code,{floodedRatio:num(r.flooded_share),floodedArea:num(r.flooded_area_m2),lsoaArea:num(r.lsoa_area_m2),floodClass:String(r.flood_class||'0'),after:r.after_period||'',event:r.event_name||'Storm Henk'})});
+      housingRows.forEach((r)=>{const code=norm(r['geography code']);if(!code)return;const total=num(r[TOTAL]),det=num(r[FIELDS.detached]),semi=num(r[FIELDS.semi]),terr=num(r[FIELDS.terraced]),flats=num(r[FIELDS.flats]);housingByCode.set(code,{name:r.geography||code,totalHouseholds:total,detachedRatio:total?det/total:0,semiRatio:total?semi/total:0,terracedRatio:total?terr/total:0,flatsRatio:total?flats/total:0})});
       const codeField=findField(geojson.features[0]&&geojson.features[0].properties,codes),nameField=names.find((k)=>Object.prototype.hasOwnProperty.call(geojson.features[0].properties||{},k));
-      const idByCode=new Map(),features=geojson.features.filter((f)=>floodByCode.has(norm(f.properties[codeField]))).map((f,i)=>{const code=norm(f.properties[codeField]),flood=floodByCode.get(code)||{},house=housingByCode.get(code)||{};f.id=i;f.properties={code,name:house.name||f.properties[nameField]||code,floodedShare:flood.floodedShare||0,floodedArea:flood.floodedArea||0,lsoaArea:flood.lsoaArea||0,floodClass:flood.floodClass||'0',after:flood.after||'',event:flood.event||'Storm Henk',totalHouseholds:house.totalHouseholds||0,detachedShare:house.detachedShare||0,semiShare:house.semiShare||0,terracedShare:house.terracedShare||0,flatsShare:house.flatsShare||0};idByCode.set(code,i);return f});
+      const idByCode=new Map(),features=geojson.features.filter((f)=>floodByCode.has(norm(f.properties[codeField]))).map((f,i)=>{const code=norm(f.properties[codeField]),flood=floodByCode.get(code)||{},house=housingByCode.get(code)||{};f.id=i;f.properties={code,name:house.name||f.properties[nameField]||code,floodedRatio:flood.floodedRatio||0,floodedArea:flood.floodedArea||0,lsoaArea:flood.lsoaArea||0,floodClass:flood.floodClass||'0',after:flood.after||'',event:flood.event||'Storm Henk',totalHouseholds:house.totalHouseholds||0,detachedRatio:house.detachedRatio||0,semiRatio:house.semiRatio||0,terracedRatio:house.terracedRatio||0,flatsRatio:house.flatsRatio||0};idByCode.set(code,i);return f});
       return{geojson:{type:'FeatureCollection',features},idByCode};
     }
     function upsertRaster(map,sourceId,layerId,url,before){if(map.getLayer(layerId))map.removeLayer(layerId);if(map.getSource(sourceId))map.removeSource(sourceId);map.addSource(sourceId,{type:'raster',url,tileSize:256});const layer={id:layerId,type:'raster',source:sourceId,paint:{'raster-resampling':'nearest','raster-fade-duration':0}};if(before&&map.getLayer(before))map.addLayer(layer,before);else map.addLayer(layer)}
     function applyMode(mode){state.mode=mode;const ids=TILESETS[mode];state.maps.forEach((map,i)=>{if(!map.isStyleLoaded())return;upsertRaster(map,i===0?'before-raster':'after-raster',i===0?'before-raster-layer':'after-raster-layer',i===0?ids.before:ids.after,'lsoa-fill')});document.getElementById('btn-true').classList.toggle('active',mode==='trueColor');document.getElementById('btn-false').classList.toggle('active',mode==='falseColor')}
+    function syncSwipeMode(){const satelliteOnly=!state.overlayVisible;const beforeEl=document.getElementById('before');const leftLabel=document.querySelector('.label-left');const rightLabel=document.querySelector('.label-right');if(satelliteOnly){beforeEl.style.display='';if(leftLabel)leftLabel.style.display='';if(rightLabel)rightLabel.style.display='';if(!state.compare){state.compare=new mapboxgl.Compare(beforeMap,afterMap,'#comparison-container',{mousemove:false,orientation:'vertical'})}requestAnimationFrame(()=>{beforeMap.resize();afterMap.resize()});return}if(state.compare&&typeof state.compare.remove==='function'){state.compare.remove();state.compare=null}beforeEl.style.display='none';if(leftLabel)leftLabel.style.display='none';if(rightLabel)rightLabel.style.display='none';requestAnimationFrame(()=>{afterMap.resize()})}
     function setOverlayButtonState(){const btn=document.getElementById('btn-overlay');btn.textContent=state.overlayVisible?'Satellite only':'Show analysis';btn.classList.toggle('active',!state.overlayVisible)}
-    function applyOverlayVisibility(){const visibility=state.overlayVisible?'visible':'none';state.maps.forEach((map)=>{if(map.getLayer('lsoa-fill'))map.setLayoutProperty('lsoa-fill','visibility',visibility);if(map.getLayer('lsoa-line'))map.setLayoutProperty('lsoa-line','visibility',visibility);if(!state.overlayVisible)map.getCanvas().style.cursor=''});if(!state.overlayVisible)setHover(null);setOverlayButtonState()}
+    function applyOverlayVisibility(){const visibility=state.overlayVisible?'visible':'none';state.maps.forEach((map)=>{if(map.getLayer('lsoa-fill'))map.setLayoutProperty('lsoa-fill','visibility',visibility);if(map.getLayer('lsoa-line'))map.setLayoutProperty('lsoa-line','visibility',visibility);if(!state.overlayVisible)map.getCanvas().style.cursor=''});if(!state.overlayVisible)setHover(null);setOverlayButtonState();syncSwipeMode()}
     function toggleOverlayVisibility(){state.overlayVisible=!state.overlayVisible;applyOverlayVisibility()}
     function ensureLayers(map){
       if(!map.getSource('lsoa'))map.addSource('lsoa',{type:'geojson',data:state.geojson});
@@ -148,19 +149,19 @@ const FILES = {
     function fillExpr(meta,stopsList){const value=['coalesce',['to-number',['get',meta.prop]],-9999],colors=meta.palette.slice(0,Math.max(1,stopsList.length+1)),step=['step',value,colors[0]];stopsList.forEach((s,i)=>step.push(s,colors[Math.min(i+1,colors.length-1)]));return meta.zero?['case',['==',value,-9999],'#5b6b7b',['<=',value,0],'#dbe4ee',step]:['case',['==',value,-9999],'#5b6b7b',step]}
     function paintMetric(){if(!state.geojson)return;const meta=METRICS[state.metric],vals=metricValues(),scaled=meta.zero?vals.filter((v)=>v>0):vals,list=stops(scaled,5),expr=fillExpr(meta,list);state.maps.forEach((map)=>{if(map.getLayer('lsoa-fill'))map.setPaintProperty('lsoa-fill','fill-color',expr)});renderLegend(meta,list,scaled)}
     function renderLegend(meta,list,scaled){const colors=meta.palette.slice(0,Math.max(1,list.length+1)),rows=[];if(meta.zero)rows.push(`<div class="row"><span class="sw" style="background:#dbe4ee"></span><span class="txt">${meta.zeroLabel}</span><span class="muted">0</span></div>`);if(!scaled.length){legendEl.innerHTML=rows.join('')||'<div class="txt">No data available.</div>';return}const min=Math.min(...scaled),bounds=[min].concat(list);bounds.forEach((start,i)=>{const next=i<bounds.length-1?bounds[i+1]:null,label=next===null?`>= ${fmt(start,meta)}`:`${fmt(start,meta)} to ${fmt(next,meta)}`;rows.push(`<div class="row"><span class="sw" style="background:${colors[Math.min(i,colors.length-1)]}"></span><span class="txt">${label}</span><span class="muted">${meta.label}</span></div>`)});legendEl.innerHTML=rows.join('')}
-    function exposedCount(){return state.geojson.features.filter((f)=>f.properties.floodedShare>0).length}
-    function renderSummary(){const fs=state.geojson.features,exposed=fs.filter((f)=>f.properties.floodedShare>0),max=exposed.length?exposed.reduce((m,f)=>Math.max(m,f.properties.floodedShare),0):0,mean=exposed.length?exposed.reduce((s,f)=>s+f.properties.floodedShare,0)/exposed.length:0,total=fs.reduce((s,f)=>s+(f.properties.totalHouseholds||0),0);summaryEl.innerHTML=[card('LSOAs in view',fmtInt(fs.length)),card('Exposed LSOAs',fmtInt(exposed.length)),card('Max flood share',fmtPct(max)),card('Mean exposed share',fmtPct(mean)),card('Total households',fmtInt(total)),card('Event window','Jan 2024')].join('')}
+    function exposedCount(){return state.geojson.features.filter((f)=>f.properties.floodedRatio>0).length}
+    function renderSummary(){const fs=state.geojson.features,exposed=fs.filter((f)=>f.properties.floodedRatio>0),max=exposed.length?exposed.reduce((m,f)=>Math.max(m,f.properties.floodedRatio),0):0,mean=exposed.length?exposed.reduce((s,f)=>s+f.properties.floodedRatio,0)/exposed.length:0,total=fs.reduce((s,f)=>s+(f.properties.totalHouseholds||0),0);summaryEl.innerHTML=[card('LSOAs in view',fmtInt(fs.length)),card('Exposed LSOAs (There is new standing water.)',fmtInt(exposed.length)),card('Max flood ratio',fmtPct(max)),card('Mean exposed ratio',fmtPct(mean)),card('Total households',fmtInt(total)),card('Event Time','Jan 2024')].join('')}
     function card(k,v){return `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`}
     function byCode(code){return state.geojson.features.find((f)=>f.properties.code===code)||null}
     function renderDetails(){
       const f=byCode(state.selected);if(!f){detailsEl.innerHTML='<div class="txt">Click an LSOA polygon to inspect its flood exposure and housing profile.</div>';return}
-      const p=f.properties,other=Math.max(0,1-(p.detachedShare+p.semiShare+p.terracedShare+p.flatsShare));
-      detailsEl.innerHTML=`<div class="sel-name">${esc(p.name)}</div><div class="sel-sub">${esc(p.code)} - ${esc(p.event)}</div><div class="bar"><div class="seg" style="width:${(p.detachedShare*100).toFixed(2)}%;background:${colors.detached}"></div><div class="seg" style="width:${(p.semiShare*100).toFixed(2)}%;background:${colors.semi}"></div><div class="seg" style="width:${(p.terracedShare*100).toFixed(2)}%;background:${colors.terraced}"></div><div class="seg" style="width:${(p.flatsShare*100).toFixed(2)}%;background:${colors.flats}"></div><div class="seg" style="width:${(other*100).toFixed(2)}%;background:${colors.other}"></div></div><div style="margin-top:10px">${chip('Detached',colors.detached,fmtPct(p.detachedShare))}${chip('Semi-detached',colors.semi,fmtPct(p.semiShare))}${chip('Terraced',colors.terraced,fmtPct(p.terracedShare))}${chip('Flats',colors.flats,fmtPct(p.flatsShare))}${chip('Other / converted',colors.other,fmtPct(other))}</div><div style="margin-top:14px">${detail('Flooded share',fmtPct(p.floodedShare))}${detail('Flooded area',`${fmtInt(p.floodedArea)} m2`)}${detail('LSOA area',`${fmtInt(p.lsoaArea)} m2`)}${detail('Total households',fmtInt(p.totalHouseholds))}${detail('Flood class',esc(p.floodClass))}${detail('After period',esc(p.after))}</div>`
+      const p=f.properties,other=Math.max(0,1-(p.detachedRatio+p.semiRatio+p.terracedRatio+p.flatsRatio));
+      detailsEl.innerHTML=`<div class="sel-name">${esc(p.name)}</div><div class="sel-sub">${esc(p.code)} - ${esc(p.event)}</div><div class="bar"><div class="seg" style="width:${(p.detachedRatio*100).toFixed(2)}%;background:${colors.detached}"></div><div class="seg" style="width:${(p.semiRatio*100).toFixed(2)}%;background:${colors.semi}"></div><div class="seg" style="width:${(p.terracedRatio*100).toFixed(2)}%;background:${colors.terraced}"></div><div class="seg" style="width:${(p.flatsRatio*100).toFixed(2)}%;background:${colors.flats}"></div><div class="seg" style="width:${(other*100).toFixed(2)}%;background:${colors.other}"></div></div><div style="margin-top:10px">${chip('Detached',colors.detached,fmtPct(p.detachedRatio))}${chip('Semi-detached',colors.semi,fmtPct(p.semiRatio))}${chip('Terraced',colors.terraced,fmtPct(p.terracedRatio))}${chip('Flats',colors.flats,fmtPct(p.flatsRatio))}${chip('Other / converted',colors.other,fmtPct(other))}</div><div style="margin-top:14px">${detail('Flooded ratio',fmtPct(p.floodedRatio))}${detail('Flooded area',`${fmtInt(p.floodedArea)} m2`)}${detail('LSOA area',`${fmtInt(p.lsoaArea)} m2`)}${detail('Total households',fmtInt(p.totalHouseholds))}${detail('Flood class',esc(p.floodClass))}${detail('After period',esc(p.after))}</div>`
     }
     function chip(label,color,value){return `<div class="chip"><span class="dot" style="background:${color}"></span><span class="txt">${label}</span><span class="muted">${value}</span></div>`}
     function detail(label,value){return `<div class="row"><span class="txt">${label}</span><span></span><span class="muted">${value}</span></div>`}
-    function topExposed(count){return state.geojson.features.filter((f)=>f.properties.floodedShare>0).sort((a,b)=>b.properties.floodedShare-a.properties.floodedShare).slice(0,count)}
-    function renderTop(){const top=topExposed(8);if(!top.length){topListEl.innerHTML='<div class="txt">No exposed LSOAs were detected in the current analysis.</div>';return}topListEl.innerHTML=top.map((f,i)=>{const p=f.properties,active=p.code===state.selected?' active':'';return `<button class="item${active}" type="button" data-code="${esc(p.code)}"><span class="rank">Top ${i+1}</span><span><div class="main">${esc(p.name)}</div><div class="sub">${esc(p.code)} - ${fmtInt(p.totalHouseholds)} households</div></span><span class="muted">${fmtPct(p.floodedShare)}</span></button>`}).join('');topListEl.querySelectorAll('[data-code]').forEach((btn)=>btn.addEventListener('click',()=>{state.selected=btn.getAttribute('data-code');refreshSelection();renderTop()}))}
+    function topExposed(count){return state.geojson.features.filter((f)=>f.properties.floodedRatio>0).sort((a,b)=>b.properties.floodedRatio-a.properties.floodedRatio).slice(0,count)}
+    function renderTop(){const top=topExposed(8);if(!top.length){topListEl.innerHTML='<div class="txt">No exposed LSOAs were detected in the current analysis.</div>';return}topListEl.innerHTML=top.map((f,i)=>{const p=f.properties,active=p.code===state.selected?' active':'';return `<button class="item${active}" type="button" data-code="${esc(p.code)}"><span class="rank">Top ${i+1}</span><span><div class="main">${esc(p.name)}</div><div class="sub">${esc(p.code)} - ${fmtInt(p.totalHouseholds)} households</div></span><span class="muted">${fmtPct(p.floodedRatio)}</span></button>`}).join('');topListEl.querySelectorAll('[data-code]').forEach((btn)=>btn.addEventListener('click',()=>{state.selected=btn.getAttribute('data-code');refreshSelection();renderTop()}))}
   </script>
 </body>
 </html>
