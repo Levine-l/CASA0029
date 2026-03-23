@@ -2,263 +2,163 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>Storm Henk Flood Swipe Comparison</title>
+  <title>Storm Henk Flood and Housing Explorer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-
-  <!-- Mapbox GL JS -->
+  <link rel="icon" href="data:," />
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.js"></script>
-
-  <!-- Compare plugin -->
-  <link
-    rel="stylesheet"
-    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.css"
-    type="text/css"
-  />
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.css" />
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/shpjs@6.2.0/dist/shp.min.js"></script>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-    }
-
-    #comparison-container {
-      position: absolute;
-      inset: 0;
-    }
-
-    #before,
-    #after {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    .map-label {
-      position: absolute;
-      top: 16px;
-      z-index: 10;
-      background: rgba(0, 0, 0, 0.65);
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 14px;
-      line-height: 1.2;
-      pointer-events: none;
-    }
-
-    .label-left {
-      left: 16px;
-    }
-
-    .label-right {
-      right: 16px;
-    }
-
-    .note {
-      position: absolute;
-      left: 16px;
-      bottom: 16px;
-      z-index: 10;
-      max-width: 360px;
-      background: rgba(255, 255, 255, 0.92);
-      color: #111;
-      padding: 10px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      line-height: 1.45;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-
-    .mode-switch {
-      position: absolute;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 20;
-      display: flex;
-      gap: 8px;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 6px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-
-    .mode-btn {
-      border: 1px solid #ddd;
-      background: #fff;
-      color: #222;
-      font-size: 13px;
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .mode-btn.active {
-      background: #1f6feb;
-      color: #fff;
-      border-color: #1f6feb;
-    }
+    :root{--bg:rgba(7,15,28,.84);--line:rgba(255,255,255,.12);--text:#e8f2fb;--muted:#9eb3c9;--accent:#7fd3ff;--shadow:0 20px 40px rgba(0,0,0,.28)}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:"Segoe UI",system-ui,sans-serif;background:#07111c;color:var(--text)}
+    #comparison-container,#before,#after{position:absolute;inset:0}
+    .map-label,.mode-switch,#panel,.note{position:absolute;z-index:20;border:1px solid var(--line);background:var(--bg);backdrop-filter:blur(14px);box-shadow:var(--shadow)}
+    .map-label{top:16px;padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.25;pointer-events:none}.label-left{left:16px}.label-right{right:396px}
+    .mode-switch{left:50%;top:16px;transform:translateX(-50%);display:flex;gap:8px;padding:8px;border-radius:14px}
+    .mode-btn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+    .mode-btn.active{background:linear-gradient(135deg,#1f8fff,#7fd3ff);color:#04111f;border-color:transparent}
+    #panel{top:16px;right:16px;bottom:16px;width:min(364px,calc(100vw - 32px));padding:16px;border-radius:18px;overflow:auto}
+    h1{margin:0;font-size:24px;line-height:1.05}.eyebrow{margin:0 0 6px;color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+    .intro,.fine,.sub{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.5}.block{margin-top:14px;padding:13px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.04)}
+    .title{margin:0 0 10px;font-size:13px;font-weight:700}label{display:block;margin-bottom:6px;font-size:12px;font-weight:600}select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.2);color:var(--text)}
+    #status{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.45;white-space:pre-wrap}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{padding:12px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06)}
+    .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.v{margin-top:6px;font-size:22px;font-weight:700}
+    .row,.item,.chip{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}.row+.row,.item+.item,.chip+.chip{margin-top:8px}
+    .sw{width:14px;height:14px;border-radius:4px;border:1px solid rgba(255,255,255,.14)}.txt{font-size:12px}.muted{text-align:right;color:var(--muted);font-size:12px}
+    .sel-name{font-size:18px;font-weight:700}.sel-sub{margin-top:4px;color:var(--muted);font-size:12px}.bar{margin-top:12px;height:12px;display:flex;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.06)}.seg{height:100%}
+    .dot{width:10px;height:10px;border-radius:999px}.item{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03);color:inherit;text-align:left;cursor:pointer}.item.active,.item:hover{border-color:rgba(127,211,255,.38);background:rgba(127,211,255,.08)}
+    .rank{color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.main{font-size:13px;font-weight:600}.sub{margin:2px 0 0;font-size:11px}
+    .note{left:16px;bottom:16px;max-width:340px;padding:12px 14px;border-radius:14px;font-size:12px;line-height:1.5}.note strong{display:block;margin-bottom:4px}
+    @media (max-width:960px){.label-right{right:16px;top:66px}.mode-switch{top:auto;bottom:252px}#panel{top:auto;left:12px;right:12px;bottom:12px;width:auto;max-height:48vh}.note{bottom:calc(48vh + 28px);max-width:280px}}
   </style>
 </head>
 <body>
   <div id="comparison-container">
     <div id="before"></div>
     <div id="after"></div>
-
-    <div class="mode-switch" aria-label="影像类型切换">
-      <button id="btn-true" class="mode-btn active" type="button">真彩色</button>
-      <button id="btn-false" class="mode-btn" type="button">假彩色</button>
+    <div class="mode-switch">
+      <button id="btn-true" class="mode-btn active" type="button">True color</button>
+      <button id="btn-false" class="mode-btn" type="button">False color</button>
+      <button id="btn-overlay" class="mode-btn" type="button">Satellite only</button>
     </div>
-
-    <div class="map-label label-left">Before flood<br>Nov–Dec 2023</div>
-    <div class="map-label label-right">After flood<br>Jan 2024</div>
-
-    <div class="note">
-      Gloucester / River Severn floodplain<br>
-      Storm Henk comparison
-    </div>
+    <div class="map-label label-left">Before flood<br />Nov-Dec 2023</div>
+    <div class="map-label label-right">After flood<br />Jan 2024</div>
+    <aside id="panel">
+      <p class="eyebrow">Storm Henk</p>
+      <h1>Flood + Housing Explorer</h1>
+      <p class="intro">Keep the imagery swipe, then read the same event as LSOA flood exposure linked to Census 2021 accommodation type.</p>
+      <div class="block">
+        <label for="metric">Overlay metric</label>
+        <select id="metric">
+          <option value="flooded_share">Flooded share of LSOA</option>
+          <option value="flooded_area">Flooded area (m2)</option>
+          <option value="total_households">Total households</option>
+          <option value="detached_share">Detached share</option>
+          <option value="semi_share">Semi-detached share</option>
+          <option value="terraced_share">Terraced share</option>
+          <option value="flats_share">Flats share</option>
+        </select>
+        <div id="status">Loading flood exposure, housing attributes, and LSOA boundaries...</div>
+      </div>
+      <section class="block"><h2 class="title">Study Area Snapshot</h2><div id="summary" class="cards"></div></section>
+      <section class="block"><h2 class="title">Legend</h2><div id="legend"></div></section>
+      <section class="block"><h2 class="title">Selected LSOA</h2><div id="details"></div></section>
+      <section class="block"><h2 class="title">Most Exposed LSOAs</h2><div id="topList"></div></section>
+      <div class="fine">Flood exposure comes from <code>flood_lsoa_storm_henk_2024.csv</code>. Housing structure comes from <code>census2021-ts044-lsoa.csv</code>. Values show area-level exposure, not property-level damage.</div>
+    </aside>
+    <div class="note"><strong>Gloucester / River Severn floodplain</strong>Use the swipe to see the event, then use the overlay to inspect where detected flood exposure overlaps with different housing types.</div>
   </div>
-
   <script>
-    //Mapbox access token
-    mapboxgl.accessToken = 'pk.eyJ1IjoibGV2aW5lbGl1IiwiYSI6ImNta21vc3doOTBleGYza3IycDNsOXRidXQifQ.SdtOnvfZEml6QGLmnnduDQ';
-
-    // Mapbox Studio tileset ID
-    // mapbox://username.tilesetid
-    const TILESETS = {
-      trueColor: {
-        before: 'mapbox://levineliu.19lrd4d8',
-        after: 'mapbox://levineliu.dasleil1'
-      },
-      falseColor: {
-        before: 'mapbox://levineliu.4eqesq76',
-        after: 'mapbox://levineliu.4ma7g0c0'
-      }
+    mapboxgl.accessToken='pk.eyJ1IjoibGV2aW5lbGl1IiwiYSI6ImNta21vc3doOTBleGYza3IycDNsOXRidXQifQ.SdtOnvfZEml6QGLmnnduDQ';
+    const TILESETS={trueColor:{before:'mapbox://levineliu.19lrd4d8',after:'mapbox://levineliu.dasleil1'},falseColor:{before:'mapbox://levineliu.4eqesq76',after:'mapbox://levineliu.4ma7g0c0'}};
+    const DATA_SOURCE={useGithub:true,githubBase:'https://raw.githubusercontent.com/Levine-l/CASA0029/main'};
+    function withBase(path){if(DATA_SOURCE.useGithub){return `${DATA_SOURCE.githubBase}/${path}`;}return path;}
+    const FILES={
+      flood:withBase('flood_lsoa_storm_henk_2024.csv'),
+      housing:withBase('census2021-ts044-lsoa.csv'),
+      shp:'data/lsoa/LSOA_2021_EW_BSC_V4.shp'
     };
-
-    let currentMode = 'trueColor';
-
-    // 3. Gloucester 大致中心
-    const center = [-2.244, 51.864];
-    const zoom = 12;
-
-    // 4. 一个极简空白 style，只放你的 raster，不叠加其他底图
-    const blankStyle = {
-      version: 8,
-      sources: {},
-      layers: [
-        {
-          id: 'background',
-          type: 'background',
-          paint: {
-            'background-color': '#f5f5f5'
-          }
-        }
-      ]
+    const TOTAL='Accommodation type: Total: All households';
+    const FIELDS={detached:'Accommodation type: Detached',semi:'Accommodation type: Semi-detached',terraced:'Accommodation type: Terraced',flats:'Accommodation type: In a purpose-built block of flats or tenement'};
+    const METRICS={
+      flooded_share:{label:'Flooded share of LSOA',prop:'floodedShare',format:'percent',palette:['#9fd7ff','#73c2ff','#46a8ff','#1c87f2','#0d61bd'],zero:true,zeroLabel:'No detected new water'},
+      flooded_area:{label:'Flooded area',prop:'floodedArea',format:'int',suffix:' m2',palette:['#b5e5ff','#8ad5ff','#5fc1ff','#289ce6','#0f6db9'],zero:true,zeroLabel:'0 m2'},
+      total_households:{label:'Total households',prop:'totalHouseholds',format:'int',palette:['#f7d489','#efb86f','#df9451','#c96a35','#9d431e']},
+      detached_share:{label:'Detached share',prop:'detachedShare',format:'percent',palette:['#ffe7a6','#ffc975','#ffab4d','#ee7f31','#c65318']},
+      semi_share:{label:'Semi-detached share',prop:'semiShare',format:'percent',palette:['#d3f1bc','#abd98f','#82c362','#4ea33a','#2f7a20']},
+      terraced_share:{label:'Terraced share',prop:'terracedShare',format:'percent',palette:['#ffd7cc','#ffb8a4','#f68b74','#e15e47','#af3425']},
+      flats_share:{label:'Flats share',prop:'flatsShare',format:'percent',palette:['#d9dbff','#b4b6ff','#8f92ff','#676bfb','#4347cf']}
     };
-
-    // 5. 创建 before map
-    const beforeMap = new mapboxgl.Map({
-      container: 'before',
-      style: blankStyle,
-      center: center,
-      zoom: zoom,
-      bearing: 0,
-      pitch: 0,
-      hash: false
-    });
-
-    // 6. 创建 after map
-    const afterMap = new mapboxgl.Map({
-      container: 'after',
-      style: blankStyle,
-      center: center,
-      zoom: zoom,
-      bearing: 0,
-      pitch: 0,
-      hash: false
-    });
-
-    // 可选：加缩放控件
-    beforeMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    afterMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-    function upsertRaster(map, sourceId, layerId, tilesetUrl) {
-      if (map.getLayer(layerId)) {
-        map.removeLayer(layerId);
-      }
-      if (map.getSource(sourceId)) {
-        map.removeSource(sourceId);
-      }
-
-      map.addSource(sourceId, {
-        type: 'raster',
-        url: tilesetUrl,
-        tileSize: 256
-      });
-
-      map.addLayer({
-        id: layerId,
-        type: 'raster',
-        source: sourceId,
-        paint: {
-          'raster-resampling': 'nearest',
-          'raster-fade-duration': 0
-        }
-      });
+    const STYLE={version:8,sources:{},layers:[{id:'bg',type:'background',paint:{'background-color':'#07111c'}}]};
+    const state={mode:'trueColor',metric:'flooded_share',overlayVisible:true,geojson:null,idByCode:new Map(),selected:null,hover:null,maps:[]};
+    const codes=['LSOA21CD','lsoa21cd','LSOA11CD','lsoa11cd','LSOA_CODE','lsoa_code'];
+    const names=['LSOA21NM','lsoa21nm','LSOA11NM','lsoa11nm','LSOA_NAME','lsoa_name'];
+    const colors={detached:'#f6ad55',semi:'#68d391',terraced:'#fc8181',flats:'#818cf8',other:'#94a3b8'};
+    const metricEl=document.getElementById('metric'),statusEl=document.getElementById('status'),summaryEl=document.getElementById('summary'),legendEl=document.getElementById('legend'),detailsEl=document.getElementById('details'),topListEl=document.getElementById('topList');
+    const beforeMap=makeMap('before'),afterMap=makeMap('after');state.maps=[beforeMap,afterMap];new mapboxgl.Compare(beforeMap,afterMap,'#comparison-container',{mousemove:false,orientation:'vertical'});
+    metricEl.addEventListener('change',()=>{state.metric=metricEl.value;paintMetric()});
+    document.getElementById('btn-true').addEventListener('click',()=>applyMode('trueColor'));
+    document.getElementById('btn-false').addEventListener('click',()=>applyMode('falseColor'));
+    document.getElementById('btn-overlay').addEventListener('click',()=>toggleOverlayVisibility());
+    Promise.all([ready(beforeMap),ready(afterMap),loadAll()]).then(([, , result])=>{state.geojson=result.geojson;state.idByCode=result.idByCode;applyMode(state.mode);state.maps.forEach(ensureLayers);const top=topExposed(1);state.selected=top.length?top[0].properties.code:null;paintMetric();renderSummary();renderTop();refreshSelection();setStatus(`${state.geojson.features.length.toLocaleString('en-GB')} LSOAs loaded\n${exposedCount()} LSOAs with detected new water`) }).catch((e)=>{console.error(e);setStatus(`Failed to load analysis layers.\n${e.message}`)});
+    function makeMap(container){const map=new mapboxgl.Map({container,style:STYLE,center:[-2.244,51.864],zoom:12,bearing:0,pitch:0,hash:false});map.addControl(new mapboxgl.NavigationControl(),'top-right');return map}
+    function ready(map){return new Promise((resolve)=>{if(map.isStyleLoaded())resolve();else map.on('load',resolve)})}
+    function setStatus(v){statusEl.textContent=v}
+    function norm(v){return String(v||'').trim().toUpperCase()}
+    function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
+    function fmtInt(v){return Number.isFinite(v)?new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(v):'N/A'}
+    function fmtPct(v){return Number.isFinite(v)?`${(v*100).toFixed(v>=.01?1:2)}%`:'N/A'}
+    function fmt(v,m){if(!Number.isFinite(v))return'N/A';if(m.format==='percent')return fmtPct(v);if(m.format==='int')return `${fmtInt(v)}${m.suffix||''}`;return String(v)}
+    function esc(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+    function toAbsoluteUrl(path){return new URL(path,window.location.href).toString()}
+    function csv(path){return new Promise((resolve,reject)=>Papa.parse(toAbsoluteUrl(path),{download:true,header:true,skipEmptyLines:true,dynamicTyping:true,complete:(r)=>resolve(r.data),error:reject}))}
+    function findField(props,cands){const names=Object.keys(props||{}),found=cands.find((k)=>names.includes(k));if(!found)throw new Error(`Could not find a matching LSOA code field: ${cands.join(', ')}`);return found}
+    async function loadAll(){
+      const [floodRows,housingRows,geojson]=await Promise.all([csv(FILES.flood),csv(FILES.housing),shp(toAbsoluteUrl(FILES.shp))]);
+      const floodByCode=new Map(),housingByCode=new Map();
+      floodRows.forEach((r)=>{const code=norm(r.lsoa21cd);if(code)floodByCode.set(code,{floodedShare:num(r.flooded_share),floodedArea:num(r.flooded_area_m2),lsoaArea:num(r.lsoa_area_m2),floodClass:String(r.flood_class||'0'),after:r.after_period||'',event:r.event_name||'Storm Henk'})});
+      housingRows.forEach((r)=>{const code=norm(r['geography code']);if(!code)return;const total=num(r[TOTAL]),det=num(r[FIELDS.detached]),semi=num(r[FIELDS.semi]),terr=num(r[FIELDS.terraced]),flats=num(r[FIELDS.flats]);housingByCode.set(code,{name:r.geography||code,totalHouseholds:total,detachedShare:total?det/total:0,semiShare:total?semi/total:0,terracedShare:total?terr/total:0,flatsShare:total?flats/total:0})});
+      const codeField=findField(geojson.features[0]&&geojson.features[0].properties,codes),nameField=names.find((k)=>Object.prototype.hasOwnProperty.call(geojson.features[0].properties||{},k));
+      const idByCode=new Map(),features=geojson.features.filter((f)=>floodByCode.has(norm(f.properties[codeField]))).map((f,i)=>{const code=norm(f.properties[codeField]),flood=floodByCode.get(code)||{},house=housingByCode.get(code)||{};f.id=i;f.properties={code,name:house.name||f.properties[nameField]||code,floodedShare:flood.floodedShare||0,floodedArea:flood.floodedArea||0,lsoaArea:flood.lsoaArea||0,floodClass:flood.floodClass||'0',after:flood.after||'',event:flood.event||'Storm Henk',totalHouseholds:house.totalHouseholds||0,detachedShare:house.detachedShare||0,semiShare:house.semiShare||0,terracedShare:house.terracedShare||0,flatsShare:house.flatsShare||0};idByCode.set(code,i);return f});
+      return{geojson:{type:'FeatureCollection',features},idByCode};
     }
-
-    function applyMode(mode) {
-      currentMode = mode;
-      const ids = TILESETS[mode];
-
-      if (beforeMap.isStyleLoaded()) {
-        upsertRaster(beforeMap, 'before-raster', 'before-raster-layer', ids.before);
-      }
-      if (afterMap.isStyleLoaded()) {
-        upsertRaster(afterMap, 'after-raster', 'after-raster-layer', ids.after);
-      }
-
-      document.getElementById('btn-true').classList.toggle('active', mode === 'trueColor');
-      document.getElementById('btn-false').classList.toggle('active', mode === 'falseColor');
+    function upsertRaster(map,sourceId,layerId,url,before){if(map.getLayer(layerId))map.removeLayer(layerId);if(map.getSource(sourceId))map.removeSource(sourceId);map.addSource(sourceId,{type:'raster',url,tileSize:256});const layer={id:layerId,type:'raster',source:sourceId,paint:{'raster-resampling':'nearest','raster-fade-duration':0}};if(before&&map.getLayer(before))map.addLayer(layer,before);else map.addLayer(layer)}
+    function applyMode(mode){state.mode=mode;const ids=TILESETS[mode];state.maps.forEach((map,i)=>{if(!map.isStyleLoaded())return;upsertRaster(map,i===0?'before-raster':'after-raster',i===0?'before-raster-layer':'after-raster-layer',i===0?ids.before:ids.after,'lsoa-fill')});document.getElementById('btn-true').classList.toggle('active',mode==='trueColor');document.getElementById('btn-false').classList.toggle('active',mode==='falseColor')}
+    function setOverlayButtonState(){const btn=document.getElementById('btn-overlay');btn.textContent=state.overlayVisible?'Satellite only':'Show analysis';btn.classList.toggle('active',!state.overlayVisible)}
+    function applyOverlayVisibility(){const visibility=state.overlayVisible?'visible':'none';state.maps.forEach((map)=>{if(map.getLayer('lsoa-fill'))map.setLayoutProperty('lsoa-fill','visibility',visibility);if(map.getLayer('lsoa-line'))map.setLayoutProperty('lsoa-line','visibility',visibility);if(!state.overlayVisible)map.getCanvas().style.cursor=''});if(!state.overlayVisible)setHover(null);setOverlayButtonState()}
+    function toggleOverlayVisibility(){state.overlayVisible=!state.overlayVisible;applyOverlayVisibility()}
+    function ensureLayers(map){
+      if(!map.getSource('lsoa'))map.addSource('lsoa',{type:'geojson',data:state.geojson});
+      if(!map.getLayer('lsoa-fill'))map.addLayer({id:'lsoa-fill',type:'fill',source:'lsoa',paint:{'fill-color':'#88a4bd','fill-opacity':.72}});
+      if(!map.getLayer('lsoa-line'))map.addLayer({id:'lsoa-line',type:'line',source:'lsoa',paint:{'line-color':['case',['boolean',['feature-state','selected'],false],'#f8fafc',['boolean',['feature-state','hover'],false],'#0f172a','rgba(255,255,255,.75)'],'line-width':['case',['boolean',['feature-state','selected'],false],2.6,['boolean',['feature-state','hover'],false],1.6,.75],'line-opacity':.95}});
+      map.on('mousemove','lsoa-fill',(e)=>{const f=e.features&&e.features[0];if(!f)return;map.getCanvas().style.cursor='pointer';setHover(f.id)});
+      map.on('mouseleave','lsoa-fill',()=>{map.getCanvas().style.cursor='';setHover(null)});
+      map.on('click','lsoa-fill',(e)=>{const f=e.features&&e.features[0];if(!f)return;state.selected=f.properties.code;refreshSelection();renderTop()});
+      applyOverlayVisibility();
     }
-
-    // 7. before raster
-    beforeMap.on('load', () => {
-      applyMode(currentMode);
-    });
-
-    // 8. after raster
-    afterMap.on('load', () => {
-      applyMode(currentMode);
-    });
-
-    // 9. Compare slider
-    const compare = new mapboxgl.Compare(
-      beforeMap,
-      afterMap,
-      '#comparison-container',
-      {
-        // 可选：初始滑块位置，0~1
-        mousemove: false,
-        orientation: 'vertical'
-      }
-    );
-
-    document.getElementById('btn-true').addEventListener('click', () => {
-      applyMode('trueColor');
-    });
-
-    document.getElementById('btn-false').addEventListener('click', () => {
-      applyMode('falseColor');
-    });
+    function setHover(id){if(state.hover===id)return;state.maps.forEach((map)=>{if(!map.getSource('lsoa'))return;if(state.hover!==null)map.setFeatureState({source:'lsoa',id:state.hover},{hover:false});if(id!==null)map.setFeatureState({source:'lsoa',id},{hover:true})});state.hover=id}
+    function refreshSelection(){const selectedId=state.idByCode.get(state.selected);state.maps.forEach((map)=>{if(!map.getSource('lsoa'))return;state.geojson.features.forEach((f)=>map.setFeatureState({source:'lsoa',id:f.id},{selected:f.id===selectedId}))});renderDetails()}
+    function metricValues(){const meta=METRICS[state.metric];return state.geojson.features.map((f)=>Number(f.properties[meta.prop])).filter((v)=>Number.isFinite(v))}
+    function stops(values,buckets){const uniq=[...new Set(values.filter((v)=>Number.isFinite(v)).sort((a,b)=>a-b))];if(!uniq.length)return[];if(uniq.length<=buckets)return uniq.slice(1);const out=[];for(let i=1;i<buckets;i+=1){const idx=Math.min(uniq.length-1,Math.floor(uniq.length*i/buckets)),v=uniq[idx];if(!out.includes(v))out.push(v)}return out}
+    function fillExpr(meta,stopsList){const value=['coalesce',['to-number',['get',meta.prop]],-9999],colors=meta.palette.slice(0,Math.max(1,stopsList.length+1)),step=['step',value,colors[0]];stopsList.forEach((s,i)=>step.push(s,colors[Math.min(i+1,colors.length-1)]));return meta.zero?['case',['==',value,-9999],'#5b6b7b',['<=',value,0],'#dbe4ee',step]:['case',['==',value,-9999],'#5b6b7b',step]}
+    function paintMetric(){if(!state.geojson)return;const meta=METRICS[state.metric],vals=metricValues(),scaled=meta.zero?vals.filter((v)=>v>0):vals,list=stops(scaled,5),expr=fillExpr(meta,list);state.maps.forEach((map)=>{if(map.getLayer('lsoa-fill'))map.setPaintProperty('lsoa-fill','fill-color',expr)});renderLegend(meta,list,scaled)}
+    function renderLegend(meta,list,scaled){const colors=meta.palette.slice(0,Math.max(1,list.length+1)),rows=[];if(meta.zero)rows.push(`<div class="row"><span class="sw" style="background:#dbe4ee"></span><span class="txt">${meta.zeroLabel}</span><span class="muted">0</span></div>`);if(!scaled.length){legendEl.innerHTML=rows.join('')||'<div class="txt">No data available.</div>';return}const min=Math.min(...scaled),bounds=[min].concat(list);bounds.forEach((start,i)=>{const next=i<bounds.length-1?bounds[i+1]:null,label=next===null?`>= ${fmt(start,meta)}`:`${fmt(start,meta)} to ${fmt(next,meta)}`;rows.push(`<div class="row"><span class="sw" style="background:${colors[Math.min(i,colors.length-1)]}"></span><span class="txt">${label}</span><span class="muted">${meta.label}</span></div>`)});legendEl.innerHTML=rows.join('')}
+    function exposedCount(){return state.geojson.features.filter((f)=>f.properties.floodedShare>0).length}
+    function renderSummary(){const fs=state.geojson.features,exposed=fs.filter((f)=>f.properties.floodedShare>0),max=exposed.length?exposed.reduce((m,f)=>Math.max(m,f.properties.floodedShare),0):0,mean=exposed.length?exposed.reduce((s,f)=>s+f.properties.floodedShare,0)/exposed.length:0,total=fs.reduce((s,f)=>s+(f.properties.totalHouseholds||0),0);summaryEl.innerHTML=[card('LSOAs in view',fmtInt(fs.length)),card('Exposed LSOAs',fmtInt(exposed.length)),card('Max flood share',fmtPct(max)),card('Mean exposed share',fmtPct(mean)),card('Total households',fmtInt(total)),card('Event window','Jan 2024')].join('')}
+    function card(k,v){return `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`}
+    function byCode(code){return state.geojson.features.find((f)=>f.properties.code===code)||null}
+    function renderDetails(){
+      const f=byCode(state.selected);if(!f){detailsEl.innerHTML='<div class="txt">Click an LSOA polygon to inspect its flood exposure and housing profile.</div>';return}
+      const p=f.properties,other=Math.max(0,1-(p.detachedShare+p.semiShare+p.terracedShare+p.flatsShare));
+      detailsEl.innerHTML=`<div class="sel-name">${esc(p.name)}</div><div class="sel-sub">${esc(p.code)} - ${esc(p.event)}</div><div class="bar"><div class="seg" style="width:${(p.detachedShare*100).toFixed(2)}%;background:${colors.detached}"></div><div class="seg" style="width:${(p.semiShare*100).toFixed(2)}%;background:${colors.semi}"></div><div class="seg" style="width:${(p.terracedShare*100).toFixed(2)}%;background:${colors.terraced}"></div><div class="seg" style="width:${(p.flatsShare*100).toFixed(2)}%;background:${colors.flats}"></div><div class="seg" style="width:${(other*100).toFixed(2)}%;background:${colors.other}"></div></div><div style="margin-top:10px">${chip('Detached',colors.detached,fmtPct(p.detachedShare))}${chip('Semi-detached',colors.semi,fmtPct(p.semiShare))}${chip('Terraced',colors.terraced,fmtPct(p.terracedShare))}${chip('Flats',colors.flats,fmtPct(p.flatsShare))}${chip('Other / converted',colors.other,fmtPct(other))}</div><div style="margin-top:14px">${detail('Flooded share',fmtPct(p.floodedShare))}${detail('Flooded area',`${fmtInt(p.floodedArea)} m2`)}${detail('LSOA area',`${fmtInt(p.lsoaArea)} m2`)}${detail('Total households',fmtInt(p.totalHouseholds))}${detail('Flood class',esc(p.floodClass))}${detail('After period',esc(p.after))}</div>`
+    }
+    function chip(label,color,value){return `<div class="chip"><span class="dot" style="background:${color}"></span><span class="txt">${label}</span><span class="muted">${value}</span></div>`}
+    function detail(label,value){return `<div class="row"><span class="txt">${label}</span><span></span><span class="muted">${value}</span></div>`}
+    function topExposed(count){return state.geojson.features.filter((f)=>f.properties.floodedShare>0).sort((a,b)=>b.properties.floodedShare-a.properties.floodedShare).slice(0,count)}
+    function renderTop(){const top=topExposed(8);if(!top.length){topListEl.innerHTML='<div class="txt">No exposed LSOAs were detected in the current analysis.</div>';return}topListEl.innerHTML=top.map((f,i)=>{const p=f.properties,active=p.code===state.selected?' active':'';return `<button class="item${active}" type="button" data-code="${esc(p.code)}"><span class="rank">Top ${i+1}</span><span><div class="main">${esc(p.name)}</div><div class="sub">${esc(p.code)} - ${fmtInt(p.totalHouseholds)} households</div></span><span class="muted">${fmtPct(p.floodedShare)}</span></button>`}).join('');topListEl.querySelectorAll('[data-code]').forEach((btn)=>btn.addEventListener('click',()=>{state.selected=btn.getAttribute('data-code');refreshSelection();renderTop()}))}
   </script>
 </body>
 </html>
