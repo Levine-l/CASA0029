@@ -103,7 +103,7 @@ const FILES = {
     document.getElementById('btn-true').addEventListener('click',()=>applyMode('trueColor'));
     document.getElementById('btn-false').addEventListener('click',()=>applyMode('falseColor'));
     document.getElementById('btn-overlay').addEventListener('click',()=>toggleOverlayVisibility());
-    //Promise.all([ready(beforeMap),ready(afterMap),loadAll()]).then(([, , result])=>{state.geojson=result.geojson;state.idByCode=result.idByCode;applyMode(state.mode);state.maps.forEach(ensureLayers);const top=topExposed(1);state.selected=top.length?top[0].properties.code:null;paintMetric();renderSummary();renderTop();refreshSelection();setStatus(`${state.geojson.features.length.toLocaleString('en-GB')} LSOAs loaded\n${exposedCount()} LSOAs with detected new water`) }).catch((e)=>{console.error(e);setStatus(`Failed to load analysis layers.\n${e.message}`)});
+    Promise.all([ready(beforeMap),ready(afterMap),loadAll()]).then(([, , result])=>{state.geojson=result.geojson;state.idByCode=result.idByCode;applyMode(state.mode);state.maps.forEach(ensureLayers);const top=topExposed(1);state.selected=top.length?top[0].properties.code:null;paintMetric();renderSummary();renderTop();refreshSelection();setStatus('')}).catch((e)=>{console.error(e);setStatus(`Failed to load analysis layers.\n${e.message}`)});
     function makeMap(container){const map=new mapboxgl.Map({container,style:STYLE,center:[-2.244,51.864],zoom:12,bearing:0,pitch:0,hash:false});map.addControl(new mapboxgl.NavigationControl(),'top-right');return map}
     function ready(map){return new Promise((resolve)=>{if(map.isStyleLoaded())resolve();else map.on('load',resolve)})}
     function setStatus(v){statusEl.textContent=v}
