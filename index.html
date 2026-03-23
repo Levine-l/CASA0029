@@ -77,9 +77,9 @@
     const DATA_SOURCE={useGithub:true,githubBase:'https://raw.githubusercontent.com/Levine-l/CASA0029/main'};
     function withBase(path){if(DATA_SOURCE.useGithub){return `${DATA_SOURCE.githubBase}/${path}`;}return path;}
     const FILES={
-      flood:withBase('flood_lsoa_storm_henk_2024.csv'),
-      housing:withBase('census2021-ts044-lsoa.csv'),
-      shp:'data/lsoa/LSOA_2021_EW_BSC_V4.shp'
+      flood:[withBase('flood_lsoa_storm_henk_2024.csv'),withBase('data/flood_lsoa_storm_henk_2024.csv'),'data/flood_lsoa_storm_henk_2024.csv'],
+      housing:[withBase('census2021-ts044-lsoa.csv'),withBase('data/census2021-ts044-lsoa.csv'),'data/census2021-ts044-lsoa.csv'],
+      shp:[withBase('data/lsoa/LSOA_2021_EW_BSC_V4.shp'),'data/lsoa/LSOA_2021_EW_BSC_V4.shp']
     };
     const TOTAL='Accommodation type: Total: All households';
     const FIELDS={detached:'Accommodation type: Detached',semi:'Accommodation type: Semi-detached',terraced:'Accommodation type: Terraced',flats:'Accommodation type: In a purpose-built block of flats or tenement'};
@@ -115,9 +115,11 @@
     function esc(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
     function toAbsoluteUrl(path){return new URL(path,window.location.href).toString()}
     function csv(path){return new Promise((resolve,reject)=>Papa.parse(toAbsoluteUrl(path),{download:true,header:true,skipEmptyLines:true,dynamicTyping:true,complete:(r)=>resolve(r.data),error:reject}))}
+    async function loadCsvCandidates(candidates,label){let lastErr=null;for(const path of candidates){try{return await csv(path)}catch(err){lastErr=err;console.warn(`CSV load failed (${label})`,path,err)}}throw new Error(`Failed to load ${label}. Tried: ${candidates.join(', ')}. Last error: ${lastErr&&lastErr.message?lastErr.message:lastErr}`)}
+    async function loadShpCandidates(candidates){let lastErr=null;for(const path of candidates){try{return await shp(toAbsoluteUrl(path))}catch(err){lastErr=err;console.warn('SHP load failed',path,err)}}throw new Error(`Failed to load LSOA shapefile. Tried: ${candidates.join(', ')}. Last error: ${lastErr&&lastErr.message?lastErr.message:lastErr}`)}
     function findField(props,cands){const names=Object.keys(props||{}),found=cands.find((k)=>names.includes(k));if(!found)throw new Error(`Could not find a matching LSOA code field: ${cands.join(', ')}`);return found}
     async function loadAll(){
-      const [floodRows,housingRows,geojson]=await Promise.all([csv(FILES.flood),csv(FILES.housing),shp(toAbsoluteUrl(FILES.shp))]);
+      const [floodRows,housingRows,geojson]=await Promise.all([loadCsvCandidates(FILES.flood,'flood CSV'),loadCsvCandidates(FILES.housing,'housing CSV'),loadShpCandidates(FILES.shp)]);
       const floodByCode=new Map(),housingByCode=new Map();
       floodRows.forEach((r)=>{const code=norm(r.lsoa21cd);if(code)floodByCode.set(code,{floodedShare:num(r.flooded_share),floodedArea:num(r.flooded_area_m2),lsoaArea:num(r.lsoa_area_m2),floodClass:String(r.flood_class||'0'),after:r.after_period||'',event:r.event_name||'Storm Henk'})});
       housingRows.forEach((r)=>{const code=norm(r['geography code']);if(!code)return;const total=num(r[TOTAL]),det=num(r[FIELDS.detached]),semi=num(r[FIELDS.semi]),terr=num(r[FIELDS.terraced]),flats=num(r[FIELDS.flats]);housingByCode.set(code,{name:r.geography||code,totalHouseholds:total,detachedShare:total?det/total:0,semiShare:total?semi/total:0,terracedShare:total?terr/total:0,flatsShare:total?flats/total:0})});
