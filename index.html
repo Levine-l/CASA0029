@@ -386,7 +386,7 @@
         <h2 class="title">Most Exposed LSOAs</h2>
         <div id="topList"></div>
       </section>
-      <div class="fine">Flood exposure comes from <code>flood_lsoa_storm_henk_2024.csv</code>. Housing structure comes from <code>census2021-ts044-lsoa.csv</code>. Sales summary comes from <code>pp_lsoa_2023_2024.csv</code>, aggregated from Price Paid records. Values show area-level exposure and area-level sales activity, not property-level flood damage.</div>
+      <div class="fine">Flood exposure comes from <code>flood_lsoa_storm_henk_2024.csv</code>. Housing structure comes from <code>census2021-ts044-lsoa.csv</code>. Sales summary comes from <code>pp/pp_lsoa_2023_2024.csv</code>, aggregated from Price Paid records. Values show area-level exposure and area-level sales activity, not property-level flood damage.</div>
     </aside>
     <div class="note"><strong>Gloucester / River Severn floodplain</strong>Use the swipe to see the event, then use the overlay to inspect where detected flood exposure overlaps with housing structure and nearby sales activity.</div>
   </div>
@@ -409,7 +409,7 @@
     const FILES = {
       flood: ['flood_lsoa_storm_henk_2024.csv'],
       housing: ['census2021-ts044-lsoa.csv'],
-      transactions: ['pp_lsoa_2023_2024.csv'],
+      transactions: ['pp/pp_lsoa_2023_2024.csv', 'pp_lsoa_2023_2024.csv'],
       shp: ['lsoa.zip']
     };
 
